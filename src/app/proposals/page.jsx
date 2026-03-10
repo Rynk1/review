@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, LogOut, FileText, Plus, Send, Trash2, Eye,
   Clock, CheckCircle, XCircle, AlertCircle, Edit3, X, Tag
@@ -234,7 +234,7 @@ function ProposalDetailModal({ proposal, onClose, token }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchDetail = useCallback(() => {
     fetch(`/api/v1/proposals/${proposal.id}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
@@ -242,7 +242,11 @@ function ProposalDetailModal({ proposal, onClose, token }) {
       .then(data => setDetail(data))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [proposal.id, token]);
+
+  useEffect(() => {
+    fetchDetail();
+  }, [fetchDetail]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

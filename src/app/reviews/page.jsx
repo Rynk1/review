@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, LogOut, ClipboardList, CheckCircle, XCircle,
   AlertTriangle, Clock, Star, MessageSquare, X, ChevronRight,
@@ -96,11 +96,7 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
   const [conflictReason, setConflictReason] = useState('');
   const [showConflictForm, setShowConflictForm] = useState(false);
 
-  useEffect(() => {
-    fetchReview();
-  }, []);
-
-  const fetchReview = async () => {
+  const fetchReview = useCallback(async () => {
     try {
       const res = await fetch(`/api/v1/reviews/${reviewId}`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -121,7 +117,11 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [reviewId, token]);
+
+  useEffect(() => {
+    fetchReview();
+  }, [fetchReview]);
 
   const handleAction = async (action) => {
     setSubmitting(true);

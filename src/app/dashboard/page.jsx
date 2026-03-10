@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, LogOut, FileText, Users, CheckSquare, AlertTriangle,
   TrendingUp, Clock, ChevronRight, RefreshCw, UserCheck, X, Star,
@@ -80,11 +80,7 @@ function MatchingModal({ proposal, onClose, token }) {
   const [assigning, setAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState('');
 
-  useEffect(() => {
-    fetchMatches();
-  }, []);
-
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     try {
       const res = await fetch(`/api/v1/proposals/${proposal.id}/matching`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -96,7 +92,11 @@ function MatchingModal({ proposal, onClose, token }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [proposal.id, token]);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
 
   const generateMatches = async () => {
     setGenerating(true);
