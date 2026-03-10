@@ -30,6 +30,8 @@ The application is a fully-implemented Multi-Tenant Grant Application & Peer Rev
 - [x] Reviewers page for managers with workload visualization
 - [x] Build passes (16 routes), lint passes (0 errors, 3 warnings)
 - [x] Committed and pushed to git
+- [x] Fixed React useEffect dependency warnings in dashboard, proposals, and reviews pages
+- [x] Added .env.example for environment variable documentation
 
 ## Current Structure
 
