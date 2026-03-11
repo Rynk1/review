@@ -8,16 +8,20 @@ The application is a fully-implemented Multi-Tenant Grant Application & Peer Rev
 
 ## Recently Completed
 
-- [x] Added premium dashboard features with sidebar navigation
-- [x] Created shared Sidebar component with role-based menu (src/components/layout/Sidebar.jsx)
-- [x] Created DashboardLayout wrapper with auth handling (src/components/layout/DashboardLayout.jsx)
-- [x] Created shared UI components library (src/components/ui/index.jsx)
-- [x] Enhanced dashboard page with grid view and quick actions
-- [x] Enhanced proposals page with comprehensive form validation (auto-save, character limits, methodology, budget, timeline fields)
-- [x] Enhanced reviews page with score tracking, recommendations, and average score display
-- [x] Enhanced reviewers page with grid/list view toggle and detail modal
-- [x] All pages now use consistent sidebar navigation with role-based menus
-- [x] Build passes, typecheck passes, lint passes with 0 errors
+- [x] Added enhanced proposal data model with comprehensive grant application fields
+- [x] Created migration 002_enhanced_proposal_fields.sql with new schema columns
+- [x] Updated proposals API routes to handle all new fields (funder context, research context, methodology, impact, team, budget, ethics, feedback priorities)
+- [x] Redesigned proposals frontend with collapsible sections and comprehensive form
+- [x] Added proposal stage selection (concept, outline, near-final, final)
+- [x] Added funder context fields (funder_name, funding_scheme, call_reference, review_panel_type, discipline, funding_amount, project_duration, deadline, country)
+- [x] Added research context fields (research_problem, state of art, knowledge gap, research questions, hypotheses)
+- [x] Added methodology fields (study_design, methods, data_sources, sample_size, analysis_plan, risk_mitigation)
+- [x] Added impact fields (scientific contribution, societal impact, policy relevance, innovation level)
+- [x] Added team information fields (PI expertise, track record, collaborators, previous grants)
+- [x] Added budget summary fields (total_budget, major_cost_categories, justification)
+- [x] Added ethics & compliance fields (ethics_required, human_subjects, animal_research, data_protection, open_science_plan)
+- [x] Added feedback priorities selection for reviewers
+- [x] Typecheck passes, lint passes with 0 errors
 
 ## Current Structure
 
