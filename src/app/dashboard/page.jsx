@@ -2,106 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  GraduationCap, LogOut, FileText, Users, CheckSquare, AlertTriangle,
+  FileText, Users, CheckSquare, AlertTriangle,
   TrendingUp, Clock, RefreshCw, UserCheck, X, Star, Search, Filter, Plus,
-  ArrowUpRight, ArrowDownRight, BarChart3, CheckCircle2, XCircle, FileSearch
+  ArrowUpRight, ArrowDownRight, BarChart3, CheckCircle2, XCircle, FileSearch,
+  Calendar, MoreVertical, Download, Upload, FilterX, Mail, Eye, Edit, Send
 } from 'lucide-react';
-
-function NavBar({ user, tenant, onLogout }) {
-  return (
-    <nav className="navbar">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="navbar-brand">
-            <div className="navbar-icon">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <div className="hidden sm:block">
-              <span className="font-bold text-slate-900">Grant Review System</span>
-              <span className="ml-2 text-sm text-slate-500">{tenant?.name}</span>
-            </div>
-          </div>
-          <div className="navbar-user">
-            <div className="navbar-avatar">
-              {(user?.full_name || user?.email || '?').charAt(0).toUpperCase()}
-            </div>
-            <div className="navbar-info hidden sm:block">
-              <div className="navbar-name">{user?.full_name || user?.email}</div>
-              <div className="navbar-role">{user?.role}</div>
-            </div>
-            <button
-              onClick={onLogout}
-              className="ml-3 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, color, trend, subtext, delay = 0 }) {
-  const colorClasses = {
-    blue: { bg: 'bg-blue-50', text: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
-    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
-    amber: { bg: 'bg-amber-50', text: 'text-amber-600', gradient: 'from-amber-500 to-orange-600' },
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
-    rose: { bg: 'bg-rose-50', text: 'text-rose-600', gradient: 'from-rose-500 to-red-600' },
-    slate: { bg: 'bg-slate-100', text: 'text-slate-600', gradient: 'from-slate-500 to-slate-600' },
-  };
-  
-  const colors = colorClasses[color] || colorClasses.blue;
-  
-  return (
-    <div 
-      className="stat-card group animate-slide-up"
-      style={{ animationDelay: `${delay}s` }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`stat-icon ${colors.bg}`}>
-          <Icon className={`h-5 w-5 ${colors.text}`} />
-        </div>
-        {trend && (
-          <div className={`flex items-center gap-1 text-xs font-medium ${
-            trend > 0 ? 'text-emerald-600' : 'text-rose-600'
-          }`}>
-            {trend > 0 ? (
-              <ArrowUpRight className="h-3 w-3" />
-            ) : (
-              <ArrowDownRight className="h-3 w-3" />
-            )}
-            {Math.abs(trend)}%
-          </div>
-        )}
-      </div>
-      <div className="stat-value">{value}</div>
-      <div className="stat-label flex items-center gap-1.5">
-        {label}
-        {subtext && <span className="text-slate-400">({subtext})</span>}
-      </div>
-    </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const config = {
-    draft: { color: 'bg-slate-100 text-slate-700', label: 'Draft' },
-    submitted: { color: 'bg-blue-100 text-blue-700', label: 'Submitted' },
-    under_review: { color: 'bg-amber-100 text-amber-700', label: 'Under Review' },
-    accepted: { color: 'bg-emerald-100 text-emerald-700', label: 'Accepted' },
-    rejected: { color: 'bg-rose-100 text-rose-700', label: 'Rejected' },
-    withdrawn: { color: 'bg-slate-100 text-slate-500', label: 'Withdrawn' },
-  };
-  const { color, label } = config[status] || config.draft;
-  return (
-    <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${color}`}>
-      {label}
-    </span>
-  );
-}
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { StatCard, StatusBadge, LoadingSpinner, Alert, EmptyState, Card, Badge } from '@/components/ui';
 
 function MatchingModal({ proposal, onClose, token }) {
   const [matches, setMatches] = useState([]);
@@ -205,16 +112,10 @@ function MatchingModal({ proposal, onClose, token }) {
 
         <div className="p-6 overflow-y-auto flex-1 max-h-[60vh]">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-sm text-red-700 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              {error}
-            </div>
+            <Alert type="error" message={error} onDismiss={() => setError('')} />
           )}
           {assignSuccess && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 text-sm text-emerald-700 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-              {assignSuccess}
-            </div>
+            <Alert type="success" message={assignSuccess} onDismiss={() => setAssignSuccess('')} />
           )}
 
           <div className="flex items-center justify-between mb-4">
@@ -236,17 +137,13 @@ function MatchingModal({ proposal, onClose, token }) {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-            </div>
+            <LoadingSpinner />
           ) : matches.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-100 mb-4">
-                <FileSearch className="h-8 w-8 text-slate-400" />
-              </div>
-              <p className="text-slate-500">No matches generated yet.</p>
-              <p className="text-sm text-slate-400 mt-1">Click "Generate Matches" to find suitable reviewers.</p>
-            </div>
+            <EmptyState
+              icon={FileSearch}
+              title="No matches generated yet"
+              description="Click 'Generate Matches' to find suitable reviewers based on expertise and availability."
+            />
           ) : (
             <div className="space-y-3">
               {matches.map((match, index) => (
@@ -270,9 +167,7 @@ function MatchingModal({ proposal, onClose, token }) {
                       </div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {(match.expertise || []).slice(0, 4).map(exp => (
-                          <span key={exp} className="inline-flex px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full">
-                            {exp}
-                          </span>
+                          <Badge key={exp} color="indigo">{exp}</Badge>
                         ))}
                       </div>
                       <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
@@ -333,9 +228,84 @@ function MatchingModal({ proposal, onClose, token }) {
   );
 }
 
+function ProposalActions({ proposal, token, onRefresh }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [updating, setUpdating] = useState(false);
+
+  const handleStatusChange = async (newStatus) => {
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/v1/proposals/${proposal.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        onRefresh();
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    } finally {
+      setUpdating(false);
+      setShowMenu(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        disabled={updating}
+        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+      >
+        {updating ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600" />
+        ) : (
+          <MoreVertical className="h-4 w-4" />
+        )}
+      </button>
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-slate-200 shadow-lg py-1 z-20 animate-fade-in">
+            {proposal.status === 'draft' && (
+              <button
+                onClick={() => handleStatusChange('submitted')}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                <Send className="h-4 w-4 text-blue-500" />
+                Submit Proposal
+              </button>
+            )}
+            {['submitted', 'under_review'].includes(proposal.status) && (
+              <>
+                <button
+                  onClick={() => handleStatusChange('accepted')}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  Accept Proposal
+                </button>
+                <button
+                  onClick={() => handleStatusChange('rejected')}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <XCircle className="h-4 w-4 text-rose-500" />
+                  Reject Proposal
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const [user, setUser] = useState(null);
-  const [tenant, setTenant] = useState(null);
   const [proposals, setProposals] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -344,26 +314,15 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [token, setToken] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
-    const storedTenant = localStorage.getItem('auth_tenant');
-
-    if (!storedToken || !storedUser) {
+    if (!storedToken) {
       window.location.href = '/login';
       return;
     }
-
-    const parsedUser = JSON.parse(storedUser);
-    if (!['manager', 'admin'].includes(parsedUser.role)) {
-      window.location.href = '/';
-      return;
-    }
-
     setToken(storedToken);
-    setUser(parsedUser);
-    setTenant(storedTenant ? JSON.parse(storedTenant) : null);
     fetchData(storedToken);
   }, []);
 
@@ -395,13 +354,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('auth_tenant');
-    window.location.href = '/login';
-  };
-
   const handleSearch = async () => {
     setLoading(true);
     try {
@@ -421,60 +373,54 @@ export default function DashboardPage() {
     }
   };
 
-  const handleStatusChange = async (proposalId, newStatus) => {
-    try {
-      const res = await fetch(`/api/v1/proposals/${proposalId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error);
-      }
-      fetchData(token);
-    } catch (err) {
-      setError(err.message);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('');
+    fetchData(token);
+  };
+
+  const hasActiveFilters = searchQuery || statusFilter;
+
   if (loading && !proposals.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-indigo-200 rounded-full blur-xl animate-pulse-subtle" />
-            <div className="relative animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          </div>
-          <p className="text-slate-500">Loading dashboard...</p>
-        </div>
-      </div>
+      <DashboardLayout requiredRoles={['manager', 'admin']}>
+        <LoadingSpinner text="Loading dashboard..." />
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen pb-12">
-      <NavBar user={user} tenant={tenant} onLogout={handleLogout} />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardLayout requiredRoles={['manager', 'admin']}>
+      <div className="space-y-6">
         {/* Page Header */}
-        <div className="mb-8 animate-slide-up">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Manage grant proposals and reviewer assignments</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+            <p className="text-slate-500 mt-1">Manage grant proposals and reviewer assignments</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fetchData(token)}
+              className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+              title="Refresh"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-700 flex items-center gap-2 animate-fade-in">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-            {error}
-          </div>
+          <Alert type="error" message={error} onDismiss={() => setError('')} />
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard icon={FileText} label="Total Proposals" value={stats.total || 0} color="indigo" delay={0} />
           <StatCard icon={Clock} label="Submitted" value={stats.submitted || 0} color="blue" delay={0.05} />
           <StatCard icon={TrendingUp} label="Under Review" value={stats.under_review || 0} color="amber" delay={0.1} />
@@ -483,38 +429,26 @@ export default function DashboardPage() {
           <StatCard icon={FileText} label="Drafts" value={stats.draft || 0} color="slate" delay={0.25} />
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="tabs mb-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-          <a href="/dashboard" className="tab active">
-            <FileText className="h-4 w-4" />
-            Proposals
-          </a>
-          <a href="/reviewers" className="tab">
-            <Users className="h-4 w-4" />
-            Reviewers
-          </a>
-        </div>
-
         {/* Search & Filter */}
-        <div className="card p-4 mb-6 animate-slide-up" style={{ animationDelay: '0.35s' }}>
+        <Card className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search proposals by title, abstract, or keywords..."
+                placeholder="Search proposals by title, keyword, or author..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={handleKeyDown}
                 className="input pl-10"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="select sm:w-48"
+              className="select w-full sm:w-40"
             >
-              <option value="">All Statuses</option>
+              <option value="">All Status</option>
               <option value="draft">Draft</option>
               <option value="submitted">Submitted</option>
               <option value="under_review">Under Review</option>
@@ -526,126 +460,94 @@ export default function DashboardPage() {
               className="btn-primary"
             >
               <Filter className="h-4 w-4" />
-              Filter
+              Search
             </button>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="btn-secondary"
+              >
+                <FilterX className="h-4 w-4" />
+                Clear
+              </button>
+            )}
           </div>
-        </div>
+        </Card>
 
-        {/* Proposals Table */}
-        <div className="table-container animate-slide-up" style={{ animationDelay: '0.4s' }}>
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Grant Proposals ({proposals.length})</h2>
-            <button
-              onClick={() => fetchData(token)}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
-          </div>
-
-          {proposals.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-100 mb-4">
-                <FileText className="h-8 w-8 text-slate-400" />
-              </div>
-              <p className="text-slate-500">No proposals found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Proposal</th>
-                    <th>Applicant</th>
-                    <th>Status</th>
-                    <th>Reviews</th>
-                    <th>Submitted</th>
-                    <th className="text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {proposals.map((proposal, index) => (
-                    <tr 
-                      key={proposal.id} 
-                      className="animate-fade-in"
-                      style={{ animationDelay: `${0.45 + index * 0.02}s` }}
+        {/* Proposals Grid */}
+        {loading ? (
+          <LoadingSpinner />
+        ) : proposals.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No proposals found"
+            description={hasActiveFilters ? "Try adjusting your search or filters" : "No proposals have been submitted yet"}
+            action={hasActiveFilters && (
+              <button onClick={clearFilters} className="btn-primary">
+                Clear Filters
+              </button>
+            )}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {proposals.map((proposal, index) => (
+              <Card 
+                key={proposal.id} 
+                className="p-5 hover:shadow-md transition-all duration-300 animate-slide-up"
+                hover
+                style={{ animationDelay: `${0.3 + index * 0.03}s` }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <StatusBadge status={proposal.status} />
+                  <ProposalActions proposal={proposal} token={token} onRefresh={() => fetchData(token)} />
+                </div>
+                
+                <h3 className="font-semibold text-slate-900 mb-2 line-clamp-2">{proposal.title}</h3>
+                <p className="text-sm text-slate-500 mb-4 line-clamp-2">{proposal.abstract}</p>
+                
+                {proposal.keywords?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {proposal.keywords.slice(0, 3).map(kw => (
+                      <Badge key={kw} color="indigo" size="sm">{kw}</Badge>
+                    ))}
+                    {proposal.keywords.length > 3 && (
+                      <Badge color="slate" size="sm">+{proposal.keywords.length - 3}</Badge>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {proposal.submitted_at 
+                      ? new Date(proposal.submitted_at).toLocaleDateString()
+                      : 'Not submitted'
+                    }
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedProposal(proposal)}
+                      className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      title="Match Reviewers"
                     >
-                      <td>
-                        <div className="max-w-xs">
-                          <div className="font-medium text-slate-900 text-sm truncate">{proposal.title}</div>
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {(proposal.keywords || []).slice(0, 3).map(kw => (
-                              <span key={kw} className="inline-flex px-1.5 py-0.5 text-xs bg-indigo-50 text-indigo-600 rounded-full">
-                                {kw}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="text-sm text-slate-900">{proposal.applicant_name}</div>
-                        <div className="text-xs text-slate-500">{proposal.applicant_email}</div>
-                      </td>
-                      <td>
-                        <StatusBadge status={proposal.status} />
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-600">
-                          <CheckSquare className="h-4 w-4 text-slate-400" />
-                          {proposal.review_count || 0}
-                        </div>
-                      </td>
-                      <td className="text-sm text-slate-500">
-                        {proposal.submitted_at
-                          ? new Date(proposal.submitted_at).toLocaleDateString()
-                          : '—'}
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-2">
-                          {['submitted', 'under_review'].includes(proposal.status) && (
-                            <button
-                              onClick={() => setSelectedProposal(proposal)}
-                              className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
-                            >
-                              <Users className="h-3 w-3" />
-                              Match
-                            </button>
-                          )}
-                          {proposal.status === 'under_review' && (
-                            <>
-                              <button
-                                onClick={() => handleStatusChange(proposal.id, 'accepted')}
-                                className="text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
-                              >
-                                Accept
-                              </button>
-                              <button
-                                onClick={() => handleStatusChange(proposal.id, 'rejected')}
-                                className="text-xs bg-rose-50 text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                      <UserCheck className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Matching Modal */}
       {selectedProposal && (
-        <MatchingModal
-          proposal={selectedProposal}
-          onClose={() => setSelectedProposal(null)}
+        <MatchingModal 
+          proposal={selectedProposal} 
+          onClose={() => setSelectedProposal(null)} 
           token={token}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

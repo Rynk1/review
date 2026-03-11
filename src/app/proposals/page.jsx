@@ -1,76 +1,62 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  GraduationCap, LogOut, FileText, Plus, Send, Trash2, Eye,
-  Clock, CheckCircle, XCircle, AlertCircle, Edit3, X, Tag, FilePlus,
-  ArrowRight, Calendar, User
+  Plus, Send, Trash2, Eye, Clock, CheckCircle, XCircle, AlertCircle, 
+  Edit3, X, Tag, FilePlus, ArrowRight, Calendar, User, Save, AlertTriangle,
+  CheckCircle2, FileText, Search, Filter, RefreshCw, MoreVertical
 } from 'lucide-react';
-
-function NavBar({ user, tenant, onLogout }) {
-  return (
-    <nav className="navbar">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="navbar-brand">
-            <div className="navbar-icon">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <div className="hidden sm:block">
-              <span className="font-bold text-slate-900">Grant Review System</span>
-              <span className="ml-2 text-sm text-slate-500">{tenant?.name}</span>
-            </div>
-          </div>
-          <div className="navbar-user">
-            <div className="navbar-avatar">
-              {(user?.full_name || user?.email || '?').charAt(0).toUpperCase()}
-            </div>
-            <div className="navbar-info hidden sm:block">
-              <div className="navbar-name">{user?.full_name || user?.email}</div>
-              <div className="navbar-role">{user?.role}</div>
-            </div>
-            <button
-              onClick={onLogout}
-              className="ml-3 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-}
-
-function StatusBadge({ status }) {
-  const config = {
-    draft: { color: 'bg-slate-100 text-slate-700', icon: Edit3, label: 'Draft' },
-    submitted: { color: 'bg-blue-100 text-blue-700', icon: Send, label: 'Submitted' },
-    under_review: { color: 'bg-amber-100 text-amber-700', icon: Clock, label: 'Under Review' },
-    accepted: { color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle, label: 'Accepted' },
-    rejected: { color: 'bg-rose-100 text-rose-700', icon: XCircle, label: 'Rejected' },
-    withdrawn: { color: 'bg-slate-100 text-slate-500', icon: X, label: 'Withdrawn' },
-  };
-  const { color, icon: Icon, label } = config[status] || config.draft;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${color}`}>
-      <Icon className="h-3 w-3" />
-      {label}
-    </span>
-  );
-}
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { StatCard, StatusBadge, LoadingSpinner, Alert, EmptyState, Card, Badge } from '@/components/ui';
 
 function ProposalModal({ proposal, onClose, onSave, token }) {
   const [title, setTitle] = useState(proposal?.title || '');
   const [abstract, setAbstract] = useState(proposal?.abstract || '');
   const [keywordsInput, setKeywordsInput] = useState((proposal?.keywords || []).join(', '));
+  const [methodology, setMethodology] = useState(proposal?.methodology || '');
+  const [budget, setBudget] = useState(proposal?.budget || '');
+  const [timeline, setTimeline] = useState(proposal?.timeline || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [touched, setTouched] = useState({});
+  const autoSaveTimeoutRef = useRef(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const handleSave = async (submit = false) => {
-    if (!title.trim() || !abstract.trim()) {
-      setError('Title and abstract are required');
+  // Auto-save functionality
+  useEffect(() => {
+    if (!hasUnsavedChanges || saving) return;
+    
+    const timer = setTimeout(() => {
+      handleSave(false, true);
+    }, 5000); // Auto-save after 5 seconds of inactivity
+    
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges]);
+
+  const handleChange = (setter, field) => (e) => {
+    setter(e.target.value);
+    setHasUnsavedChanges(true);
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleBlur = (field) => () => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const validate = () => {
+    const errors = [];
+    if (!title.trim()) errors.push('Title is required');
+    if (!abstract.trim()) errors.push('Abstract is required');
+    if (title.length < 10) errors.push('Title must be at least 10 characters');
+    if (abstract.length < 50) errors.push('Abstract must be at least 50 characters');
+    return errors;
+  };
+
+  const handleSave = async (submit = false, isAutoSave = false) => {
+    const errors = validate();
+    if (errors.length > 0 && !isAutoSave) {
+      setError(errors.join(', '));
       return;
     }
 
@@ -80,17 +66,25 @@ function ProposalModal({ proposal, onClose, onSave, token }) {
     try {
       const keywords = keywordsInput.split(',').map(k => k.trim()).filter(Boolean);
 
-      if (proposal?.id) {
-        const body = { title, abstract, keywords };
-        if (submit) body.status = 'submitted';
+      const proposalData = { 
+        title, 
+        abstract, 
+        keywords,
+        methodology: methodology || undefined,
+        budget: budget || undefined,
+        timeline: timeline || undefined,
+      };
+      
+      if (submit) proposalData.status = 'submitted';
 
+      if (proposal?.id) {
         const res = await fetch(`/api/v1/proposals/${proposal.id}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify(proposalData),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
@@ -101,7 +95,7 @@ function ProposalModal({ proposal, onClose, onSave, token }) {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ title, abstract, keywords }),
+          body: JSON.stringify(proposalData),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
@@ -118,27 +112,45 @@ function ProposalModal({ proposal, onClose, onSave, token }) {
         }
       }
 
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
       onSave();
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to save proposal');
+      if (!isAutoSave) {
+        setError(err.message || 'Failed to save proposal');
+      }
     } finally {
       setSaving(false);
     }
   };
 
   const keywords = keywordsInput.split(',').map(k => k.trim()).filter(Boolean);
+  
+  const getCharacterCountClass = (current, min, max) => {
+    if (current < min) return 'text-rose-500';
+    if (current > max) return 'text-rose-500';
+    return 'text-emerald-600';
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div 
-        className="modal-content w-full max-w-2xl" 
+        className="modal-content w-full max-w-3xl" 
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">
-            {proposal?.id ? 'Edit Proposal' : 'New Proposal'}
-          </h2>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {proposal?.id ? 'Edit Proposal' : 'New Proposal'}
+            </h2>
+            {hasUnsavedChanges && (
+              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Unsaved changes
+              </p>
+            )}
+          </div>
           <button 
             onClick={onClose} 
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -147,14 +159,12 @@ function ProposalModal({ proposal, onClose, onSave, token }) {
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 max-h-[60vh] space-y-5">
+        <div className="p-6 overflow-y-auto flex-1 max-h-[65vh] space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              {error}
-            </div>
+            <Alert type="error" message={error} onDismiss={() => setError('')} />
           )}
 
+          {/* Title */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
               Title <span className="text-rose-500">*</span>
@@ -162,56 +172,144 @@ function ProposalModal({ proposal, onClose, onSave, token }) {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={handleChange(setTitle, 'title')}
+              onBlur={handleBlur('title')}
               placeholder="Enter a descriptive title for your grant proposal"
-              className="input"
+              className={`input ${touched.title && !title.trim() ? 'border-rose-300 focus:border-rose-500' : ''}`}
             />
+            <div className="flex items-center justify-between mt-1.5">
+              <div className="text-xs text-slate-400">
+                {touched.title && title.length < 10 && (
+                  <span className="text-rose-500">Minimum 10 characters required</span>
+                )}
+              </div>
+              <div className={`text-xs ${getCharacterCountClass(title.length, 10, 200)}`}>
+                {title.length}/200
+              </div>
+            </div>
           </div>
 
+          {/* Abstract */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
               Abstract <span className="text-rose-500">*</span>
             </label>
             <textarea
               value={abstract}
-              onChange={(e) => setAbstract(e.target.value)}
+              onChange={handleChange(setAbstract, 'abstract')}
+              onBlur={handleBlur('abstract')}
               placeholder="Provide a comprehensive abstract of your research proposal, including objectives, methodology, and expected outcomes..."
               rows={8}
-              className="input resize-none"
+              className={`input resize-none ${touched.abstract && abstract.length < 50 ? 'border-rose-300 focus:border-rose-500' : ''}`}
             />
-            <div className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {abstract.length} characters
+            <div className="flex items-center justify-between mt-1.5">
+              <div className="text-xs text-slate-400">
+                {touched.abstract && abstract.length < 50 && (
+                  <span className="text-rose-500">Minimum 50 characters required</span>
+                )}
+              </div>
+              <div className={`text-xs flex items-center gap-1 ${getCharacterCountClass(abstract.length, 50, 3000)}`}>
+                <Clock className="h-3 w-3" />
+                {abstract.length}/3000 characters
+              </div>
             </div>
           </div>
 
+          {/* Keywords */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Keywords
+              Keywords <span className="text-slate-400 font-normal">(helps match with reviewers)</span>
             </label>
             <div className="relative">
-              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Tag className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={keywordsInput}
-                onChange={(e) => setKeywordsInput(e.target.value)}
+                onChange={(e) => {
+                  setKeywordsInput(e.target.value);
+                  setHasUnsavedChanges(true);
+                }}
                 placeholder="machine learning, deep learning, computer vision (comma-separated)"
                 className="input pl-10"
               />
             </div>
             <p className="text-xs text-slate-500 mt-1.5">
-              Keywords help match your proposal with the most relevant reviewers
+              Add relevant keywords to help match your proposal with the most appropriate reviewers
             </p>
             {keywords.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {keywords.map(kw => (
-                  <span key={kw} className="inline-flex px-2.5 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
-                    {kw}
-                  </span>
+                  <Badge key={kw} color="indigo">{kw}</Badge>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Methodology - Expanded Field */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Methodology <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={methodology}
+              onChange={(e) => {
+                setMethodology(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Describe your research methodology and approach in detail..."
+              rows={4}
+              className="input resize-none"
+            />
+            <div className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {methodology.length}/2000 characters
+            </div>
+          </div>
+
+          {/* Budget & Timeline Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Budget Request <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <input
+                  type="text"
+                  value={budget}
+                  onChange={(e) => {
+                    setBudget(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
+                  placeholder="e.g., 50,000"
+                  className="input pl-8"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Timeline <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={timeline}
+                onChange={(e) => {
+                  setTimeline(e.target.value);
+                  setHasUnsavedChanges(true);
+                }}
+                placeholder="e.g., 12 months"
+                className="input"
+              />
+            </div>
+          </div>
+
+          {/* Auto-save indicator */}
+          {lastSaved && (
+            <div className="text-xs text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
@@ -227,8 +325,8 @@ function ProposalModal({ proposal, onClose, onSave, token }) {
               disabled={saving}
               className="btn-secondary"
             >
-              {saving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600" /> : null}
-              Save as Draft
+              {saving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600" /> : <Save className="h-4 w-4" />}
+              Save Draft
             </button>
             <button
               onClick={() => handleSave(true)}
@@ -266,11 +364,14 @@ function ProposalDetailModal({ proposal, onClose, token }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div 
-        className="modal-content w-full max-w-2xl" 
+        className="modal-content w-full max-w-3xl" 
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Proposal Details</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-900">Proposal Details</h2>
+            {detail?.proposal && <StatusBadge status={detail.proposal.status} />}
+          </div>
           <button 
             onClick={onClose} 
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -278,42 +379,72 @@ function ProposalDetailModal({ proposal, onClose, token }) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto flex-1 max-h-[60vh]">
+        <div className="p-6 overflow-y-auto flex-1 max-h-[65vh]">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-            </div>
+            <LoadingSpinner />
           ) : detail ? (
             <div className="space-y-6">
               <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="text-xl font-bold text-slate-900">{detail.proposal?.title}</h3>
-                  <StatusBadge status={detail.proposal?.status} />
+                <h3 className="text-xl font-bold text-slate-900 mb-4">{detail.proposal?.title}</h3>
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-slate-600 leading-relaxed">{detail.proposal?.abstract}</p>
                 </div>
-                <p className="text-slate-600 text-sm leading-relaxed">{detail.proposal?.abstract}</p>
               </div>
+
+              {detail.proposal?.methodology && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-700 mb-2">Methodology</h4>
+                  <p className="text-sm text-slate-600 leading-relaxed">{detail.proposal.methodology}</p>
+                </div>
+              )}
+
+              {(detail.proposal?.budget || detail.proposal?.timeline) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {detail.proposal?.budget && (
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <div className="text-xs text-slate-500 mb-1">Budget Request</div>
+                      <div className="text-lg font-bold text-slate-900">${detail.proposal.budget}</div>
+                    </div>
+                  )}
+                  {detail.proposal?.timeline && (
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <div className="text-xs text-slate-500 mb-1">Timeline</div>
+                      <div className="text-lg font-bold text-slate-900">{detail.proposal.timeline}</div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {detail.proposal?.keywords?.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-slate-700 mb-2">Keywords</h4>
                   <div className="flex flex-wrap gap-2">
                     {detail.proposal.keywords.map(kw => (
-                      <span key={kw} className="inline-flex px-2.5 py-1 text-xs bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
-                        {kw}
-                      </span>
+                      <Badge key={kw} color="indigo">{kw}</Badge>
                     ))}
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center gap-6 text-sm text-slate-500 border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Created: {detail.proposal?.created_at ? new Date(detail.proposal.created_at).toLocaleDateString() : 'N/A'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Submitted: {detail.proposal?.submitted_at ? new Date(detail.proposal.submitted_at).toLocaleDateString() : 'Not submitted'}
+                </div>
+              </div>
 
               {detail.reviews?.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-slate-700 mb-3">Reviews ({detail.reviews.length})</h4>
                   <div className="space-y-2">
                     {detail.reviews.map(review => (
-                      <div key={review.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                      <div key={review.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-semibold">
                             {(review.reviewer_name || '?').charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -324,7 +455,7 @@ function ProposalDetailModal({ proposal, onClose, token }) {
                             </div>
                           </div>
                         </div>
-                        <StatusBadge status={review.status} />
+                        <StatusBadge status={review.status} type="review" />
                       </div>
                     ))}
                   </div>
@@ -393,7 +524,7 @@ export default function ProposalsPage() {
   };
 
   const handleDelete = async (proposalId) => {
-    if (!confirm('Are you sure you want to delete this draft proposal?')) return;
+    if (!confirm('Are you sure you want to delete this draft proposal? This action cannot be undone.')) return;
     try {
       const res = await fetch(`/api/v1/proposals/${proposalId}`, {
         method: 'DELETE',
@@ -429,17 +560,13 @@ export default function ProposalsPage() {
     }
   };
 
+  const refreshData = () => fetchProposals(token);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-indigo-200 rounded-full blur-xl animate-pulse-subtle" />
-            <div className="relative animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          </div>
-          <p className="text-slate-500">Loading proposals...</p>
-        </div>
-      </div>
+      <DashboardLayout requiredRoles={['applicant']}>
+        <LoadingSpinner text="Loading proposals..." />
+      </DashboardLayout>
     );
   }
 
@@ -449,14 +576,12 @@ export default function ProposalsPage() {
   const decidedCount = proposals.filter(p => ['accepted', 'rejected'].includes(p.status)).length;
 
   return (
-    <div className="min-h-screen pb-12">
-      <NavBar user={user} tenant={tenant} onLogout={handleLogout} />
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardLayout requiredRoles={['applicant']}>
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4 animate-slide-up">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Proposals</h1>
+            <h1 className="text-2xl font-bold text-slate-900">My Proposals</h1>
             <p className="text-slate-500 mt-1">Submit and track your grant applications</p>
           </div>
           <button
@@ -469,103 +594,79 @@ export default function ProposalsPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-700 flex items-center gap-2 animate-fade-in">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            {error}
-          </div>
+          <Alert type="error" message={error} onDismiss={() => setError('')} />
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Drafts', value: draftCount, color: 'slate', icon: Edit3 },
             { label: 'Submitted', value: submittedCount, color: 'blue', icon: Send },
             { label: 'Under Review', value: underReviewCount, color: 'amber', icon: Clock },
             { label: 'Decided', value: decidedCount, color: 'emerald', icon: CheckCircle },
           ].map((stat, index) => (
-            <div 
-              key={stat.label} 
-              className={`
-                stat-card animate-slide-up
-              `}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className={`
-                  w-10 h-10 rounded-xl flex items-center justify-center
-                  ${stat.color === 'slate' ? 'bg-slate-100 text-slate-600' : ''}
-                  ${stat.color === 'blue' ? 'bg-blue-100 text-blue-600' : ''}
-                  ${stat.color === 'amber' ? 'bg-amber-100 text-amber-600' : ''}
-                  ${stat.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : ''}
-                `}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-              <div className="text-xs text-slate-500 mt-1">{stat.label}</div>
-            </div>
+            <StatCard 
+              key={stat.label}
+              icon={stat.icon} 
+              label={stat.label} 
+              value={stat.value} 
+              color={stat.color} 
+              delay={index * 0.05}
+            />
           ))}
         </div>
 
         {/* Proposals List */}
         {proposals.length === 0 ? (
-          <div className="card p-16 text-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 mb-6">
-              <FilePlus className="h-10 w-10 text-indigo-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-700 mb-2">No proposals yet</h3>
-            <p className="text-slate-500 mb-6 max-w-sm mx-auto">Start by creating your first grant proposal to begin the application process</p>
-            <button
-              onClick={() => setShowNewModal(true)}
-              className="btn-primary mx-auto"
-            >
-              <Plus className="h-5 w-5" />
-              Create First Proposal
-            </button>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No proposals yet"
+            description="Start by creating your first grant proposal. Our step-by-step form will guide you through the process."
+            action={
+              <button onClick={() => setShowNewModal(true)} className="btn-primary">
+                <Plus className="h-5 w-5" />
+                Create Your First Proposal
+              </button>
+            }
+          />
         ) : (
           <div className="space-y-4">
             {proposals.map((proposal, index) => (
-              <div 
+              <Card 
                 key={proposal.id} 
-                className="card p-5 animate-slide-up hover:shadow-card-hover"
-                style={{ animationDelay: `${0.25 + index * 0.03}s` }}
+                className="p-5 hover:shadow-md transition-all duration-300 animate-slide-up"
+                hover
+                style={{ animationDelay: `${0.2 + index * 0.03}s` }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h3 className="font-semibold text-slate-900 truncate">{proposal.title}</h3>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
                       <StatusBadge status={proposal.status} />
-                    </div>
-                    <p className="text-sm text-slate-500 line-clamp-2 mb-3">{proposal.abstract}</p>
-                    <div className="flex items-center gap-4 flex-wrap">
                       {proposal.keywords?.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {proposal.keywords.slice(0, 4).map(kw => (
-                            <span key={kw} className="inline-flex px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full">
-                              {kw}
-                            </span>
-                          ))}
-                        </div>
+                        <span className="text-xs text-slate-400">
+                          {proposal.keywords.slice(0, 2).join(', ')}
+                        </span>
                       )}
-                      <span className="text-xs text-slate-400 flex-shrink-0 flex items-center gap-1">
-                        {proposal.review_count > 0 && (
-                          <>
-                            <CheckCircle className="h-3 w-3" />
-                            {proposal.review_count} review(s)
-                          </>
-                        )}
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-2">{proposal.title}</h3>
+                    <p className="text-sm text-slate-500 line-clamp-2 mb-3">{proposal.abstract}</p>
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {proposal.submitted_at 
+                          ? `Submitted ${new Date(proposal.submitted_at).toLocaleDateString()}`
+                          : `Created ${proposal.created_at ? new Date(proposal.created_at).toLocaleDateString() : 'N/A'}`
+                        }
                       </span>
+                      {proposal.review_count > 0 && (
+                        <span className="flex items-center gap-1">
+                          <FileText className="h-3.5 w-3.5" />
+                          {proposal.review_count} review{proposal.review_count !== 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => setViewingProposal(proposal)}
-                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                  <div className="flex items-center gap-2 ml-4">
                     {proposal.status === 'draft' && (
                       <>
                         <button
@@ -576,47 +677,52 @@ export default function ProposalsPage() {
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleSubmit(proposal.id)}
-                          className="p-2 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                          title="Submit"
-                        >
-                          <Send className="h-4 w-4" />
-                        </button>
-                        <button
                           onClick={() => handleDelete(proposal.id)}
-                          className="p-2 text-rose-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+                        <button
+                          onClick={() => handleSubmit(proposal.id)}
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="Submit"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
                       </>
+                    )}
+                    {['submitted', 'under_review', 'accepted', 'rejected'].includes(proposal.status) && (
+                      <button
+                        onClick={() => setViewingProposal(proposal)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     )}
                   </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
       </div>
 
-      {showNewModal && (
-        <ProposalModal
-          proposal={null}
-          onClose={() => setShowNewModal(false)}
-          onSave={() => fetchProposals(token)}
-          token={token}
-        />
-      )}
-
-      {editingProposal && (
+      {/* Create/Edit Modal */}
+      {(showNewModal || editingProposal) && (
         <ProposalModal
           proposal={editingProposal}
-          onClose={() => setEditingProposal(null)}
-          onSave={() => fetchProposals(token)}
+          onClose={() => {
+            setShowNewModal(false);
+            setEditingProposal(null);
+          }}
+          onSave={refreshData}
           token={token}
         />
       )}
 
+      {/* View Details Modal */}
       {viewingProposal && (
         <ProposalDetailModal
           proposal={viewingProposal}
@@ -624,6 +730,6 @@ export default function ProposalsPage() {
           token={token}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }
