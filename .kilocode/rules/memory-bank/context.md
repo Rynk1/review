@@ -8,19 +8,18 @@ The application is a fully-implemented Multi-Tenant Grant Application & Peer Rev
 
 ## Recently Completed
 
-- [x] Added enhanced proposal data model with comprehensive grant application fields
-- [x] Created migration 002_enhanced_proposal_fields.sql with new schema columns
-- [x] Updated proposals API routes to handle all new fields (funder context, research context, methodology, impact, team, budget, ethics, feedback priorities)
-- [x] Redesigned proposals frontend with collapsible sections and comprehensive form
-- [x] Added proposal stage selection (concept, outline, near-final, final)
-- [x] Added funder context fields (funder_name, funding_scheme, call_reference, review_panel_type, discipline, funding_amount, project_duration, deadline, country)
-- [x] Added research context fields (research_problem, state of art, knowledge gap, research questions, hypotheses)
-- [x] Added methodology fields (study_design, methods, data_sources, sample_size, analysis_plan, risk_mitigation)
-- [x] Added impact fields (scientific contribution, societal impact, policy relevance, innovation level)
-- [x] Added team information fields (PI expertise, track record, collaborators, previous grants)
-- [x] Added budget summary fields (total_budget, major_cost_categories, justification)
-- [x] Added ethics & compliance fields (ethics_required, human_subjects, animal_research, data_protection, open_science_plan)
-- [x] Added feedback priorities selection for reviewers
+- [x] Enhanced reviewer data model with comprehensive fields
+- [x] Created migration 003_enhanced_reviewer_review_models.sql
+- [x] Added identity fields: institution, department, country, career_stage
+- [x] Added multi-layer expertise taxonomy (disciplines, methods, theoretical, data_types, populations, applications)
+- [x] Added funder familiarity tracking (UKRI, NIH, ERC, Wellcome Trust, NSF)
+- [x] Enhanced conflict detection (collaborators, coauthors, doctoral_supervisor, students)
+- [x] Added availability tracking (reviews_per_month, busy_periods, turnaround_time)
+- [x] Added motivation tracking for engagement
+- [x] Added performance metrics for reputation scoring
+- [x] Enhanced matching algorithm with new scoring components
+- [x] Added structured review sections (scientific_merit, methodology, impact, fit_to_funder, competitiveness, detailed_feedback)
+- [x] Updated frontend pages with enhanced data display
 - [x] Typecheck passes, lint passes with 0 errors
 
 ## Current Structure
@@ -28,17 +27,19 @@ The application is a fully-implemented Multi-Tenant Grant Application & Peer Rev
 | File/Directory | Purpose | Status |
 |----------------|---------|--------|
 | `src/db/migrations/001_initial_schema.sql` | Full PostgreSQL schema | ✅ Ready |
+| `src/db/migrations/002_enhanced_proposal_fields.sql` | Enhanced proposal fields | ✅ Ready |
+| `src/db/migrations/003_enhanced_reviewer_review_models.sql` | Enhanced reviewer & review models | ✅ Ready |
 | `src/db/seed.sql` | Development seed data | ✅ Ready |
 | `src/lib/db.js` | Neon DB connection + audit/notification helpers | ✅ Ready |
 | `src/lib/auth.js` | JWT token generation/validation + RBAC helpers | ✅ Ready |
-| `src/lib/matching.js` | Reviewer-proposal matching algorithm | ✅ Ready |
+| `src/lib/matching.js` | Enhanced matching algorithm | ✅ Ready |
 | `src/app/api/auth/sso/callback/route.js` | SSO authentication | ✅ Ready |
 | `src/app/api/v1/users/me/route.js` | User profile CRUD | ✅ Ready |
 | `src/app/api/v1/proposals/route.js` | Proposals list/create | ✅ Ready |
 | `src/app/api/v1/proposals/[id]/route.js` | Proposal detail/update/delete | ✅ Ready |
 | `src/app/api/v1/proposals/[id]/matching/route.js` | Reviewer matching | ✅ Ready |
 | `src/app/api/v1/proposals/[id]/assign/route.js` | Reviewer assignment | ✅ Ready |
-| `src/app/api/v1/reviews/[id]/route.js` | Review lifecycle | ✅ Ready |
+| `src/app/api/v1/reviews/[id]/route.js` | Review lifecycle with enhanced structure | ✅ Ready |
 | `src/app/api/v1/reviewers/route.js` | Reviewer pool management | ✅ Ready |
 | `src/app/api/v1/reviewers/optin/route.js` | Reviewer opt-in/profile | ✅ Ready |
 | `src/app/api/v1/integrations/orcid/route.js` | ORCID OAuth integration | ✅ Ready |
@@ -62,12 +63,33 @@ The application is a fully-implemented Multi-Tenant Grant Application & Peer Rev
 - Every API query filters by `tenant_id` from token
 - Tenant config stored as JSONB (double_blind, workload_limit, SSO metadata)
 
-### Matching Algorithm
-- `final_score = relevance × (1 - conflict) × (1 - bias) × availability`
-- Relevance: keyword matching against expertise, areas, publication titles
-- Conflict: self (1.0), direct collaborator (1.0), coauthorship (0.8), same institution (0.3)
-- Availability: `(limit - current) / limit`, minimum 0.1
-- Results cached in `reviewer_matches` table
+### Enhanced Matching Algorithm (v2)
+- **Final Score Formula**:
+  ```
+  final_score = relevance × funder_familiarity × reputation × availability × (1-conflict) × (1-bias)
+  ```
+- **Relevance** (30%): Keyword matching + expertise taxonomy similarity
+- **Funder Familiarity** (20%): Panel experience, years of experience, successful grants
+- **Reputation** (15%): Total reviews, quality score, timeliness score
+- **Availability** (20%): Workload utilization, busy periods
+- **No Conflict** (15%): Self, collaborator, coauthorship, institutional ties
+
+### Reviewer Profile Fields
+- Identity: name, email, ORCID, institution, department, country, career_stage
+- Expertise: Multi-layer taxonomy (disciplines, methods, theoretical, data_types, populations, applications)
+- Funder Familiarity: UKRI, NIH, ERC, Wellcome Trust, NSF with panel_experience
+- Preferences: proposal_stage_preference, review_type_preference
+- Conflict Detection: previous_collaborators, recent_coauthors, institutions, doctoral_supervisor, students
+- Availability: reviews_per_month, busy_periods, review_turnaround_time
+- Motivation: community_service, career_development, networking, learning
+
+### Structured Review Sections
+1. Scientific Merit (novelty, importance)
+2. Methodology (rigour, feasibility, risk)
+3. Impact (scientific, societal, policy)
+4. Fit to Funder (fits_call, matches_panel)
+5. Competitiveness (fundable, borderline, unlikely)
+6. Detailed Feedback (major_strengths, major_weaknesses, specific_suggestions)
 
 ### Role-Based Access
 - `applicant`: own proposals only
@@ -90,3 +112,6 @@ ORCID_CLIENT_SECRET=...        # Optional: for real ORCID OAuth
 | 2026-03-10 | Initial template created |
 | 2026-03-10 | Full PRD implementation: 9 DB tables, 11 API routes, 5 frontend pages, matching algorithm |
 | 2026-03-11 | Enhanced UI with premium design system and responsive layouts |
+| 2026-03-11 | Enhanced reviewer data model: identity, expertise taxonomy, funder familiarity, conflict detection, availability, motivation, performance metrics |
+| 2026-03-11 | Improved matching algorithm with expertise similarity, funder familiarity scoring, career diversity, reputation scoring |
+| 2026-03-11 | Structured review sections: scientific merit, methodology, impact, fit to funder, competitiveness, detailed feedback |
