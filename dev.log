@@ -1,0 +1,14 @@
+$ next dev
+⚠ You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
+▲ Next.js 16.1.3 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://10.0.0.1:3001
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 807ms
+ POST /api/auth/sso/callback 200 in 1916ms (compile: 618ms, render: 1298ms)
+ GET /api/v1/users/me 200 in 383ms (compile: 172ms, render: 211ms)
+ GET /login 200 in 2.9s (compile: 2.7s, render: 174ms)
+[?25h
