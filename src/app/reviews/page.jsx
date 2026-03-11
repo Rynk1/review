@@ -3,37 +3,43 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, LogOut, ClipboardList, CheckCircle, XCircle,
-  AlertTriangle, Clock, Star, MessageSquare, X, ChevronRight,
-  BookOpen, User, Calendar, AlertCircle, Send, Save
+  AlertTriangle, Clock, Star, MessageSquare, X, BookOpen, 
+  Calendar, AlertCircle, Send, Save, User, FileText, ChevronRight
 } from 'lucide-react';
 
 function NavBar({ user, tenant, onLogout }) {
   return (
-    <div className="bg-white shadow-sm border-b">
+    <nav className="navbar">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 rounded-lg p-1.5">
-              <GraduationCap className="h-6 w-6 text-white" />
+          <div className="navbar-brand">
+            <div className="navbar-icon">
+              <GraduationCap className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <span className="font-bold text-gray-900">Grant Review System</span>
-              <span className="ml-2 text-sm text-gray-500">{tenant?.name}</span>
+            <div className="hidden sm:block">
+              <span className="font-bold text-slate-900">Grant Review System</span>
+              <span className="ml-2 text-sm text-slate-500">{tenant?.name}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-900">{user?.full_name || user?.email}</div>
-              <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
+          <div className="navbar-user">
+            <div className="navbar-avatar">
+              {(user?.full_name || user?.email || '?').charAt(0).toUpperCase()}
             </div>
-            <button onClick={onLogout} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm">
+            <div className="navbar-info hidden sm:block">
+              <div className="navbar-name">{user?.full_name || user?.email}</div>
+              <div className="navbar-role">{user?.role}</div>
+            </div>
+            <button
+              onClick={onLogout}
+              className="ml-3 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Logout"
+            >
               <LogOut className="h-4 w-4" />
-              Logout
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -41,10 +47,10 @@ function StatusBadge({ status }) {
   const config = {
     assigned: { color: 'bg-blue-100 text-blue-700', label: 'Assigned' },
     accepted: { color: 'bg-indigo-100 text-indigo-700', label: 'Accepted' },
-    declined: { color: 'bg-red-100 text-red-700', label: 'Declined' },
-    in_progress: { color: 'bg-yellow-100 text-yellow-700', label: 'In Progress' },
-    completed: { color: 'bg-green-100 text-green-700', label: 'Completed' },
-    cancelled: { color: 'bg-gray-100 text-gray-500', label: 'Cancelled' },
+    declined: { color: 'bg-rose-100 text-rose-700', label: 'Declined' },
+    in_progress: { color: 'bg-amber-100 text-amber-700', label: 'In Progress' },
+    completed: { color: 'bg-emerald-100 text-emerald-700', label: 'Completed' },
+    cancelled: { color: 'bg-slate-100 text-slate-500', label: 'Cancelled' },
   };
   const { color, label } = config[status] || config.assigned;
   return (
@@ -55,10 +61,16 @@ function StatusBadge({ status }) {
 }
 
 function ScoreInput({ label, value, onChange, disabled }) {
+  const getColor = (val) => {
+    if (val >= 8) return 'text-emerald-600';
+    if (val >= 5) return 'text-amber-600';
+    return 'text-rose-600';
+  };
+
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <div className="flex items-center gap-2">
+      <label className="block text-xs font-semibold text-slate-600 mb-2">{label}</label>
+      <div className="flex items-center gap-3">
         <input
           type="range"
           min="1"
@@ -66,11 +78,9 @@ function ScoreInput({ label, value, onChange, disabled }) {
           value={value || 5}
           onChange={(e) => onChange(parseInt(e.target.value))}
           disabled={disabled}
-          className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
         />
-        <span className={`w-8 text-center text-sm font-bold ${
-          value >= 8 ? 'text-green-600' : value >= 5 ? 'text-yellow-600' : 'text-red-600'
-        }`}>
+        <span className={`w-8 text-center text-sm font-bold ${getColor(value)}`}>
           {value || 5}
         </span>
       </div>
@@ -105,7 +115,6 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
       if (!res.ok) throw new Error(data.error);
       setReview(data.review);
 
-      // Pre-fill scores if exists
       if (data.review.scores && Object.keys(data.review.scores).length > 0) {
         setScores(data.review.scores);
       }
@@ -170,53 +179,62 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
   const canDeclareConflict = review && !['completed', 'cancelled'].includes(review.status);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Review Assignment</h2>
+    <div className="modal-overlay" onClick={onClose}>
+      <div 
+        className="modal-content w-full max-w-3xl" 
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-900">Review Assignment</h2>
             {review && <StatusBadge status={review.status} />}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="h-6 w-6" />
+          <button 
+            onClick={onClose} 
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-y-auto flex-1 max-h-[60vh]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
             </div>
           ) : error && !review ? (
-            <div className="text-center py-8 text-red-600">{error}</div>
+            <div className="text-center py-8 text-rose-600">{error}</div>
           ) : review ? (
             <div className="space-y-6">
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-700">
                   {success}
                 </div>
               )}
 
               {/* Proposal Info */}
-              <div className="bg-blue-50 rounded-xl p-5">
-                <h3 className="font-bold text-gray-900 text-lg mb-2">{review.proposal?.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{review.proposal?.abstract}</p>
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100">
+                <div className="flex items-start gap-2 mb-3">
+                  <FileText className="h-5 w-5 text-indigo-600 mt-0.5" />
+                  <h3 className="font-bold text-slate-900 text-lg">{review.proposal?.title}</h3>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed mb-4">{review.proposal?.abstract}</p>
                 {review.proposal?.keywords?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
+                  <div className="flex flex-wrap gap-1.5 mb-4">
                     {review.proposal.keywords.map(kw => (
-                      <span key={kw} className="inline-flex px-2 py-0.5 text-xs bg-white text-blue-700 rounded-full border border-blue-200">
+                      <span key={kw} className="inline-flex px-2.5 py-1 text-xs bg-white text-indigo-700 rounded-full border border-indigo-200">
                         {kw}
                       </span>
                     ))}
                   </div>
                 )}
                 {review.proposal?.applicant_name && (
-                  <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
                     <User className="h-4 w-4" />
                     <span>Applicant: {review.proposal.applicant_name}</span>
                   </div>
@@ -224,30 +242,38 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
               </div>
 
               {/* Review Dates */}
-              <div className="flex items-center gap-6 text-sm text-gray-500">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  Assigned: {new Date(review.assigned_at).toLocaleDateString()}
+              <div className="flex flex-wrap items-center gap-6 text-sm text-slate-500">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-slate-400" />
+                  <span>Assigned: {new Date(review.assigned_at).toLocaleDateString()}</span>
                 </div>
                 {review.due_date && (
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-4 w-4" />
-                    Due: {new Date(review.due_date).toLocaleDateString()}
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-slate-400" />
+                    <span>Due: {new Date(review.due_date).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons for Assigned Status */}
               {canAccept && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                  <p className="text-sm text-yellow-800 mb-3">
-                    You have been assigned to review this proposal. Please accept or decline.
-                  </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                  <div className="flex items-start gap-3 mb-4">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">
+                        You have been assigned to review this proposal
+                      </p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Please accept or decline this assignment.
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleAction('accept')}
                       disabled={submitting}
-                      className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+                      className="btn-primary bg-emerald-600 hover:bg-emerald-700"
                     >
                       <CheckCircle className="h-4 w-4" />
                       Accept Review
@@ -255,7 +281,7 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                     <button
                       onClick={() => handleAction('decline')}
                       disabled={submitting}
-                      className="flex items-center gap-2 bg-white text-red-600 border border-red-300 px-4 py-2 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
+                      className="btn-secondary text-rose-600 border-rose-200 hover:bg-rose-50"
                     >
                       <XCircle className="h-4 w-4" />
                       Decline
@@ -266,13 +292,13 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
 
               {/* Scoring Form */}
               {(canEdit || review.status === 'completed') && (
-                <div className="space-y-5">
-                  <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Star className="h-5 w-5 text-yellow-500" />
+                <div className="space-y-6">
+                  <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-500" />
                     Evaluation Scores
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-5">
                     <ScoreInput
                       label="Innovation (1-10)"
                       value={scores.innovation}
@@ -306,12 +332,12 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Recommendation</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Recommendation</label>
                     <select
                       value={scores.recommendation || 'accept'}
                       onChange={(e) => setScores(s => ({ ...s, recommendation: e.target.value }))}
                       disabled={!canEdit}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      className="select"
                     >
                       <option value="strong_accept">Strong Accept</option>
                       <option value="accept">Accept</option>
@@ -322,7 +348,7 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
                       <MessageSquare className="inline h-4 w-4 mr-1" />
                       Review Comments
                     </label>
@@ -332,7 +358,7 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                       disabled={!canEdit}
                       placeholder="Provide detailed feedback on the proposal's strengths, weaknesses, and suggestions for improvement..."
                       rows={6}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50"
+                      className="input resize-none"
                     />
                   </div>
                 </div>
@@ -340,8 +366,8 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
 
               {/* Conflict Declaration Form */}
               {showConflictForm && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <h4 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+                  <h4 className="font-semibold text-rose-800 mb-3 flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     Declare Conflict of Interest
                   </h4>
@@ -350,20 +376,20 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                     onChange={(e) => setConflictReason(e.target.value)}
                     placeholder="Please describe the nature of your conflict of interest..."
                     rows={3}
-                    className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
+                    className="input mb-3 border-rose-300 focus:border-rose-500 focus:ring-rose-500/20"
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAction('declare_conflict')}
                       disabled={submitting || !conflictReason.trim()}
-                      className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 disabled:opacity-50"
+                      className="btn-primary bg-rose-600 hover:bg-rose-700"
                     >
                       <AlertTriangle className="h-4 w-4" />
                       Confirm Conflict
                     </button>
                     <button
                       onClick={() => setShowConflictForm(false)}
-                      className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      className="btn-secondary"
                     >
                       Cancel
                     </button>
@@ -376,12 +402,12 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
 
         {/* Footer Actions */}
         {review && !['completed', 'cancelled', 'declined'].includes(review.status) && (
-          <div className="p-6 border-t bg-gray-50 flex items-center justify-between gap-3">
+          <div className="p-6 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
             <div className="flex gap-2">
               {canDeclareConflict && !showConflictForm && (
                 <button
                   onClick={() => setShowConflictForm(true)}
-                  className="flex items-center gap-1.5 text-xs text-red-600 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50"
+                  className="flex items-center gap-1.5 text-xs text-rose-600 border border-rose-300 px-3 py-2 rounded-lg hover:bg-rose-50 transition-colors"
                 >
                   <AlertTriangle className="h-3.5 w-3.5" />
                   Declare Conflict
@@ -391,7 +417,7 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                 <button
                   onClick={() => handleAction('decline')}
                   disabled={submitting}
-                  className="flex items-center gap-1.5 text-xs text-gray-600 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                  className="flex items-center gap-1.5 text-xs text-slate-600 border border-slate-300 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
                 >
                   <XCircle className="h-3.5 w-3.5" />
                   Decline
@@ -403,9 +429,9 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                 <button
                   onClick={() => handleAction('save_draft')}
                   disabled={submitting}
-                  className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                  className="btn-secondary"
                 >
-                  {submitting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600" /> : <Save className="h-4 w-4" />}
+                  {submitting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600" /> : <Save className="h-4 w-4" />}
                   Save Draft
                 </button>
               )}
@@ -413,7 +439,7 @@ function ReviewModal({ reviewId, onClose, onUpdate, token }) {
                 <button
                   onClick={() => handleAction('submit')}
                   disabled={submitting}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                  className="btn-primary"
                 >
                   {submitting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Send className="h-4 w-4" />}
                   Submit Review
@@ -461,7 +487,6 @@ export default function ReviewsPage() {
 
   const fetchAssignedProposals = async (authToken) => {
     try {
-      // Get proposals assigned to this reviewer
       const res = await fetch('/api/v1/proposals?limit=50', {
         headers: { 'Authorization': `Bearer ${authToken}` },
       });
@@ -472,7 +497,6 @@ export default function ReviewsPage() {
       const data = await res.json();
       setProposals(data.proposals || []);
 
-      // Fetch review details for each proposal
       const details = {};
       for (const proposal of (data.proposals || [])) {
         try {
@@ -507,129 +531,125 @@ export default function ReviewsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading reviews...</p>
+          <div className="relative">
+            <div className="absolute inset-0 bg-indigo-200 rounded-full blur-xl animate-pulse-subtle" />
+            <div className="relative animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          </div>
+          <p className="text-slate-500">Loading your assignments...</p>
         </div>
       </div>
     );
   }
 
-  const pendingCount = Object.values(reviewDetails).filter(r => r.status === 'assigned').length;
-  const inProgressCount = Object.values(reviewDetails).filter(r => ['accepted', 'in_progress'].includes(r.status)).length;
-  const completedCount = Object.values(reviewDetails).filter(r => r.status === 'completed').length;
+  const pendingCount = proposals.filter(p => {
+    const review = reviewDetails[p.id];
+    return review && ['assigned', 'accepted', 'in_progress'].includes(review.status);
+  }).length;
+
+  const completedCount = proposals.filter(p => {
+    const review = reviewDetails[p.id];
+    return review && review.status === 'completed';
+  }).length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen pb-12">
       <NavBar user={user} tenant={tenant} onLogout={handleLogout} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">My Reviews</h1>
-          <p className="text-gray-500 mt-1">Manage your assigned proposal reviews</p>
+        <div className="mb-8 animate-slide-up">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Reviews</h1>
+          <p className="text-slate-500 mt-1">Review assigned grant proposals</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-700 flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-700 flex items-center gap-2 animate-fade-in">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             {error}
           </div>
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Pending Response', value: pendingCount, color: 'text-blue-600', bg: 'bg-blue-50', icon: Clock },
-            { label: 'In Progress', value: inProgressCount, color: 'text-yellow-600', bg: 'bg-yellow-50', icon: ClipboardList },
-            { label: 'Completed', value: completedCount, color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle },
-          ].map(stat => (
-            <div key={stat.label} className={`${stat.bg} rounded-xl p-4`}>
-              <div className="flex items-center gap-2 mb-1">
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                <span className={`text-2xl font-bold ${stat.color}`}>{stat.value}</span>
+            { label: 'Total Assigned', value: proposals.length, color: 'indigo', icon: ClipboardList },
+            { label: 'Pending', value: pendingCount, color: 'amber', icon: Clock },
+            { label: 'Completed', value: completedCount, color: 'emerald', icon: CheckCircle },
+            { label: 'Declined', value: Object.values(reviewDetails).filter(r => r.status === 'declined').length, color: 'rose', icon: XCircle },
+          ].map((stat, index) => (
+            <div 
+              key={stat.label} 
+              className="stat-card animate-slide-up"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className={`
+                  w-10 h-10 rounded-xl flex items-center justify-center
+                  ${stat.color === 'indigo' ? 'bg-indigo-100 text-indigo-600' : ''}
+                  ${stat.color === 'amber' ? 'bg-amber-100 text-amber-600' : ''}
+                  ${stat.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : ''}
+                  ${stat.color === 'rose' ? 'bg-rose-100 text-rose-600' : ''}
+                `}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
               </div>
-              <div className="text-xs text-gray-500">{stat.label}</div>
+              <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+              <div className="text-xs text-slate-500 mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Reviews List */}
+        {/* Assignments List */}
         {proposals.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border p-16 text-center">
-            <ClipboardList className="h-16 w-16 mx-auto mb-4 text-gray-200" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">No reviews assigned</h3>
-            <p className="text-gray-500">You have not been assigned any proposals to review yet.</p>
+          <div className="card p-16 text-center animate-slide-up">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-100 mb-6">
+              <ClipboardList className="h-10 w-10 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">No assignments yet</h3>
+            <p className="text-slate-500">You haven't been assigned any proposals to review yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {proposals.map((proposal) => {
+            {proposals.map((proposal, index) => {
               const review = reviewDetails[proposal.id];
               return (
-                <div key={proposal.id} className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
+                <div 
+                  key={proposal.id} 
+                  className="card p-5 animate-slide-up hover:shadow-card-hover cursor-pointer"
+                  style={{ animationDelay: `${0.25 + index * 0.03}s` }}
+                  onClick={() => review && setSelectedReviewId(review.id)}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-gray-900 truncate">{proposal.title}</h3>
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="font-semibold text-slate-900 truncate">{proposal.title}</h3>
                         {review && <StatusBadge status={review.status} />}
                       </div>
-                      <p className="text-sm text-gray-500 line-clamp-2 mb-3">{proposal.abstract}</p>
-                      {proposal.keywords?.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {proposal.keywords.slice(0, 4).map(kw => (
-                            <span key={kw} className="inline-flex px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full">
-                              {kw}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <p className="text-sm text-slate-500 line-clamp-2 mb-3">{proposal.abstract}</p>
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {proposal.keywords?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {proposal.keywords.slice(0, 4).map(kw => (
+                              <span key={kw} className="inline-flex px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full">
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {review && new Date(review.assigned_at).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {review && (
-                        <button
-                          onClick={() => setSelectedReviewId(review.id)}
-                          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
-                        >
-                          {review.status === 'assigned' ? (
-                            <>
-                              <Clock className="h-4 w-4" />
-                              Respond
-                            </>
-                          ) : review.status === 'completed' ? (
-                            <>
-                              <CheckCircle className="h-4 w-4" />
-                              View
-                            </>
-                          ) : (
-                            <>
-                              <ClipboardList className="h-4 w-4" />
-                              Continue
-                            </>
-                          )}
-                        </button>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
                       )}
                     </div>
                   </div>
-
-                  {review && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-400">
-                      <span>Assigned {new Date(review.assigned_at).toLocaleDateString()}</span>
-                      {review.due_date && (
-                        <span className={`flex items-center gap-1 ${
-                          new Date(review.due_date) < new Date() ? 'text-red-500' : ''
-                        }`}>
-                          <Calendar className="h-3 w-3" />
-                          Due {new Date(review.due_date).toLocaleDateString()}
-                        </span>
-                      )}
-                      {review.status === 'completed' && review.completed_at && (
-                        <span className="text-green-600">
-                          Completed {new Date(review.completed_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -637,7 +657,6 @@ export default function ReviewsPage() {
         )}
       </div>
 
-      {/* Review Modal */}
       {selectedReviewId && (
         <ReviewModal
           reviewId={selectedReviewId}

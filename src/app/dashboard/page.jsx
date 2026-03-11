@@ -3,70 +3,102 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   GraduationCap, LogOut, FileText, Users, CheckSquare, AlertTriangle,
-  TrendingUp, Clock, ChevronRight, RefreshCw, UserCheck, X, Star,
-  BarChart2, Search, Filter, Plus, Eye, Zap
+  TrendingUp, Clock, RefreshCw, UserCheck, X, Star, Search, Filter, Plus,
+  ArrowUpRight, ArrowDownRight, BarChart3, CheckCircle2, XCircle, FileSearch
 } from 'lucide-react';
 
 function NavBar({ user, tenant, onLogout }) {
   return (
-    <div className="bg-white shadow-sm border-b">
+    <nav className="navbar">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 rounded-lg p-1.5">
-              <GraduationCap className="h-6 w-6 text-white" />
+          <div className="navbar-brand">
+            <div className="navbar-icon">
+              <GraduationCap className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <span className="font-bold text-gray-900">Grant Review System</span>
-              <span className="ml-2 text-sm text-gray-500">{tenant?.name}</span>
+            <div className="hidden sm:block">
+              <span className="font-bold text-slate-900">Grant Review System</span>
+              <span className="ml-2 text-sm text-slate-500">{tenant?.name}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-900">{user?.full_name || user?.email}</div>
-              <div className="text-xs text-gray-500 capitalize">{user?.role}</div>
+          <div className="navbar-user">
+            <div className="navbar-avatar">
+              {(user?.full_name || user?.email || '?').charAt(0).toUpperCase()}
+            </div>
+            <div className="navbar-info hidden sm:block">
+              <div className="navbar-name">{user?.full_name || user?.email}</div>
+              <div className="navbar-role">{user?.role}</div>
             </div>
             <button
               onClick={onLogout}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm"
+              className="ml-3 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Logout"
             >
               <LogOut className="h-4 w-4" />
-              Logout
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, subtext }) {
+function StatCard({ icon: Icon, label, value, color, trend, subtext, delay = 0 }) {
+  const colorClasses = {
+    blue: { bg: 'bg-blue-50', text: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
+    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', gradient: 'from-indigo-500 to-purple-600' },
+    amber: { bg: 'bg-amber-50', text: 'text-amber-600', gradient: 'from-amber-500 to-orange-600' },
+    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', gradient: 'from-emerald-500 to-teal-600' },
+    rose: { bg: 'bg-rose-50', text: 'text-rose-600', gradient: 'from-rose-500 to-red-600' },
+    slate: { bg: 'bg-slate-100', text: 'text-slate-600', gradient: 'from-slate-500 to-slate-600' },
+  };
+  
+  const colors = colorClasses[color] || colorClasses.blue;
+  
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`p-2 rounded-lg ${color}`}>
-          <Icon className="h-5 w-5 text-white" />
+    <div 
+      className="stat-card group animate-slide-up"
+      style={{ animationDelay: `${delay}s` }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className={`stat-icon ${colors.bg}`}>
+          <Icon className={`h-5 w-5 ${colors.text}`} />
         </div>
+        {trend && (
+          <div className={`flex items-center gap-1 text-xs font-medium ${
+            trend > 0 ? 'text-emerald-600' : 'text-rose-600'
+          }`}>
+            {trend > 0 ? (
+              <ArrowUpRight className="h-3 w-3" />
+            ) : (
+              <ArrowDownRight className="h-3 w-3" />
+            )}
+            {Math.abs(trend)}%
+          </div>
+        )}
       </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <div className="text-sm text-gray-600 mt-1">{label}</div>
-      {subtext && <div className="text-xs text-gray-400 mt-1">{subtext}</div>}
+      <div className="stat-value">{value}</div>
+      <div className="stat-label flex items-center gap-1.5">
+        {label}
+        {subtext && <span className="text-slate-400">({subtext})</span>}
+      </div>
     </div>
   );
 }
 
 function StatusBadge({ status }) {
-  const colors = {
-    draft: 'bg-gray-100 text-gray-700',
-    submitted: 'bg-blue-100 text-blue-700',
-    under_review: 'bg-yellow-100 text-yellow-700',
-    accepted: 'bg-green-100 text-green-700',
-    rejected: 'bg-red-100 text-red-700',
-    withdrawn: 'bg-gray-100 text-gray-500',
+  const config = {
+    draft: { color: 'bg-slate-100 text-slate-700', label: 'Draft' },
+    submitted: { color: 'bg-blue-100 text-blue-700', label: 'Submitted' },
+    under_review: { color: 'bg-amber-100 text-amber-700', label: 'Under Review' },
+    accepted: { color: 'bg-emerald-100 text-emerald-700', label: 'Accepted' },
+    rejected: { color: 'bg-rose-100 text-rose-700', label: 'Rejected' },
+    withdrawn: { color: 'bg-slate-100 text-slate-500', label: 'Withdrawn' },
   };
+  const { color, label } = config[status] || config.draft;
   return (
-    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${colors[status] || 'bg-gray-100 text-gray-700'}`}>
-      {status?.replace('_', ' ')}
+    <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${color}`}>
+      {label}
     </span>
   );
 }
@@ -153,43 +185,51 @@ function MatchingModal({ proposal, onClose, token }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b flex items-center justify-between">
+    <div className="modal-overlay" onClick={onClose}>
+      <div 
+        className="modal-content w-full max-w-3xl" 
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Reviewer Matching</h2>
-            <p className="text-sm text-gray-500 mt-0.5 truncate max-w-md">{proposal.title}</p>
+            <h2 className="text-lg font-bold text-slate-900">Reviewer Matching</h2>
+            <p className="text-sm text-slate-500 mt-0.5 truncate max-w-md">{proposal.title}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="h-6 w-6" />
+          <button 
+            onClick={onClose} 
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-y-auto flex-1 max-h-[60vh]">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-sm text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               {error}
             </div>
           )}
           {assignSuccess && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-sm text-green-700">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 text-sm text-emerald-700 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
               {assignSuccess}
             </div>
           )}
 
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
+            <h3 className="font-semibold text-slate-800">
               {matches.length > 0 ? `${matches.length} Candidate Reviewers` : 'No matches yet'}
             </h3>
             <button
               onClick={generateMatches}
               disabled={generating}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+              className="btn-primary py-2 text-sm"
             >
               {generating ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
               ) : (
-                <Zap className="h-4 w-4" />
+                <Star className="h-4 w-4" />
               )}
               {generating ? 'Generating...' : 'Generate Matches'}
             </button>
@@ -197,55 +237,65 @@ function MatchingModal({ proposal, onClose, token }) {
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
             </div>
           ) : matches.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p>No matches generated yet. Click &quot;Generate Matches&quot; to find suitable reviewers.</p>
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-100 mb-4">
+                <FileSearch className="h-8 w-8 text-slate-400" />
+              </div>
+              <p className="text-slate-500">No matches generated yet.</p>
+              <p className="text-sm text-slate-400 mt-1">Click "Generate Matches" to find suitable reviewers.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {matches.map((match) => (
+              {matches.map((match, index) => (
                 <div
                   key={match.reviewer_id}
                   onClick={() => toggleReviewer(match.reviewer_id)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedReviewers.includes(match.reviewer_id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`
+                    p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 animate-slide-up
+                    ${selectedReviewers.includes(match.reviewer_id)
+                      ? 'border-indigo-500 bg-indigo-50/50 shadow-sm shadow-indigo-500/10'
+                      : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                    }
+                  `}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{match.reviewer_name}</span>
-                        <span className="text-xs text-gray-500">{match.reviewer_email}</span>
+                        <span className="font-semibold text-slate-900">{match.reviewer_name}</span>
+                        <span className="text-xs text-slate-500">{match.reviewer_email}</span>
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-1.5 mt-2">
                         {(match.expertise || []).slice(0, 4).map(exp => (
-                          <span key={exp} className="inline-flex px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
+                          <span key={exp} className="inline-flex px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full">
                             {exp}
                           </span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        <span>Workload: {match.current_assignments}/{match.workload_limit}</span>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {match.current_assignments}/{match.workload_limit}
+                        </span>
                         {match.reasoning?.relevance_factors?.keyword_matches?.length > 0 && (
-                          <span className="text-green-600">
+                          <span className="text-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
                             {match.reasoning.relevance_factors.keyword_matches.length} keyword matches
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <div className="text-lg font-bold text-blue-600">
+                      <div className="text-2xl font-bold text-indigo-600">
                         {Math.round(match.final_score * 100)}%
                       </div>
-                      <div className="text-xs text-gray-400">match score</div>
-                      <div className="mt-1 space-y-0.5 text-xs">
-                        <div className="text-gray-500">Rel: {Math.round(match.relevance_score * 100)}%</div>
-                        <div className={match.conflict_score > 0.3 ? 'text-red-500' : 'text-gray-500'}>
+                      <div className="text-xs text-slate-400">match score</div>
+                      <div className="mt-2 space-y-0.5 text-xs">
+                        <div className="text-slate-500">Rel: {Math.round(match.relevance_score * 100)}%</div>
+                        <div className={match.conflict_score > 0.3 ? 'text-rose-500' : 'text-slate-500'}>
                           Conf: {Math.round(match.conflict_score * 100)}%
                         </div>
                       </div>
@@ -258,15 +308,15 @@ function MatchingModal({ proposal, onClose, token }) {
         </div>
 
         {selectedReviewers.length > 0 && (
-          <div className="p-6 border-t bg-gray-50">
+          <div className="p-6 border-t border-slate-200 bg-slate-50">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-slate-700 font-medium">
                 {selectedReviewers.length} reviewer(s) selected
               </span>
               <button
                 onClick={assignReviewers}
                 disabled={assigning}
-                className="flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50"
+                className="btn-primary"
               >
                 {assigning ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -329,7 +379,6 @@ export default function DashboardPage() {
       const data = await res.json();
       setProposals(data.proposals || []);
 
-      // Compute stats
       const allProposals = data.proposals || [];
       setStats({
         total: data.total || 0,
@@ -394,70 +443,76 @@ export default function DashboardPage() {
 
   if (loading && !proposals.length) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <div className="relative">
+            <div className="absolute inset-0 bg-indigo-200 rounded-full blur-xl animate-pulse-subtle" />
+            <div className="relative animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          </div>
+          <p className="text-slate-500">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen pb-12">
       <NavBar user={user} tenant={tenant} onLogout={handleLogout} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Manage grant proposals and reviewer assignments</p>
+        <div className="mb-8 animate-slide-up">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Manage grant proposals and reviewer assignments</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-700">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-sm text-red-700 flex items-center gap-2 animate-fade-in">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
             {error}
           </div>
         )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          <StatCard icon={FileText} label="Total Proposals" value={stats.total || 0} color="bg-blue-500" />
-          <StatCard icon={Clock} label="Submitted" value={stats.submitted || 0} color="bg-indigo-500" />
-          <StatCard icon={TrendingUp} label="Under Review" value={stats.under_review || 0} color="bg-yellow-500" />
-          <StatCard icon={CheckSquare} label="Accepted" value={stats.accepted || 0} color="bg-green-500" />
-          <StatCard icon={AlertTriangle} label="Rejected" value={stats.rejected || 0} color="bg-red-500" />
-          <StatCard icon={FileText} label="Drafts" value={stats.draft || 0} color="bg-gray-400" />
+          <StatCard icon={FileText} label="Total Proposals" value={stats.total || 0} color="indigo" delay={0} />
+          <StatCard icon={Clock} label="Submitted" value={stats.submitted || 0} color="blue" delay={0.05} />
+          <StatCard icon={TrendingUp} label="Under Review" value={stats.under_review || 0} color="amber" delay={0.1} />
+          <StatCard icon={CheckSquare} label="Accepted" value={stats.accepted || 0} color="emerald" delay={0.15} />
+          <StatCard icon={XCircle} label="Rejected" value={stats.rejected || 0} color="rose" delay={0.2} />
+          <StatCard icon={FileText} label="Drafts" value={stats.draft || 0} color="slate" delay={0.25} />
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex gap-2 mb-6">
-          <a href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
+        <div className="tabs mb-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <a href="/dashboard" className="tab active">
+            <FileText className="h-4 w-4" />
             Proposals
           </a>
-          <a href="/reviewers" className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">
+          <a href="/reviewers" className="tab">
+            <Users className="h-4 w-4" />
             Reviewers
           </a>
         </div>
 
         {/* Search & Filter */}
-        <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-          <div className="flex gap-3">
+        <div className="card p-4 mb-6 animate-slide-up" style={{ animationDelay: '0.35s' }}>
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search proposals by title, abstract, or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input pl-10"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="select sm:w-48"
             >
               <option value="">All Statuses</option>
               <option value="draft">Draft</option>
@@ -468,7 +523,7 @@ export default function DashboardPage() {
             </select>
             <button
               onClick={handleSearch}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
+              className="btn-primary"
             >
               <Filter className="h-4 w-4" />
               Filter
@@ -477,74 +532,81 @@ export default function DashboardPage() {
         </div>
 
         {/* Proposals Table */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Grant Proposals ({proposals.length})</h2>
+        <div className="table-container animate-slide-up" style={{ animationDelay: '0.4s' }}>
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-900">Grant Proposals ({proposals.length})</h2>
             <button
               onClick={() => fetchData(token)}
-              className="text-gray-400 hover:text-gray-600"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Refresh"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
           </div>
 
           {proposals.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p>No proposals found</p>
+            <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-100 mb-4">
+                <FileText className="h-8 w-8 text-slate-400" />
+              </div>
+              <p className="text-slate-500">No proposals found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Proposal</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Reviews</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th>Proposal</th>
+                    <th>Applicant</th>
+                    <th>Status</th>
+                    <th>Reviews</th>
+                    <th>Submitted</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {proposals.map((proposal) => (
-                    <tr key={proposal.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4">
+                <tbody>
+                  {proposals.map((proposal, index) => (
+                    <tr 
+                      key={proposal.id} 
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${0.45 + index * 0.02}s` }}
+                    >
+                      <td>
                         <div className="max-w-xs">
-                          <div className="font-medium text-gray-900 text-sm truncate">{proposal.title}</div>
-                          <div className="flex flex-wrap gap-1 mt-1">
+                          <div className="font-medium text-slate-900 text-sm truncate">{proposal.title}</div>
+                          <div className="flex flex-wrap gap-1 mt-1.5">
                             {(proposal.keywords || []).slice(0, 3).map(kw => (
-                              <span key={kw} className="inline-flex px-1.5 py-0.5 text-xs bg-blue-50 text-blue-600 rounded">
+                              <span key={kw} className="inline-flex px-1.5 py-0.5 text-xs bg-indigo-50 text-indigo-600 rounded-full">
                                 {kw}
                               </span>
                             ))}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900">{proposal.applicant_name}</div>
-                        <div className="text-xs text-gray-500">{proposal.applicant_email}</div>
+                      <td>
+                        <div className="text-sm text-slate-900">{proposal.applicant_name}</div>
+                        <div className="text-xs text-slate-500">{proposal.applicant_email}</div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td>
                         <StatusBadge status={proposal.status} />
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <CheckSquare className="h-4 w-4 text-gray-400" />
+                      <td>
+                        <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                          <CheckSquare className="h-4 w-4 text-slate-400" />
                           {proposal.review_count || 0}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-500">
+                      <td className="text-sm text-slate-500">
                         {proposal.submitted_at
                           ? new Date(proposal.submitted_at).toLocaleDateString()
                           : '—'}
                       </td>
-                      <td className="px-4 py-4">
+                      <td>
                         <div className="flex items-center justify-end gap-2">
                           {['submitted', 'under_review'].includes(proposal.status) && (
                             <button
                               onClick={() => setSelectedProposal(proposal)}
-                              className="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100"
+                              className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
                             >
                               <Users className="h-3 w-3" />
                               Match
@@ -554,13 +616,13 @@ export default function DashboardPage() {
                             <>
                               <button
                                 onClick={() => handleStatusChange(proposal.id, 'accepted')}
-                                className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100"
+                                className="text-xs bg-emerald-50 text-emerald-600 px-2.5 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
                               >
                                 Accept
                               </button>
                               <button
                                 onClick={() => handleStatusChange(proposal.id, 'rejected')}
-                                className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100"
+                                className="text-xs bg-rose-50 text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-rose-100 transition-colors"
                               >
                                 Reject
                               </button>
@@ -577,7 +639,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Matching Modal */}
       {selectedProposal && (
         <MatchingModal
           proposal={selectedProposal}
