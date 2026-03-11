@@ -136,6 +136,9 @@ export default function LoginPage() {
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_user', JSON.stringify(data.user));
       localStorage.setItem('auth_tenant', JSON.stringify(data.tenant));
+      if (data.demoMode) {
+        localStorage.setItem('demo_mode', 'true');
+      }
 
       switch (data.user.role) {
         case 'applicant':
@@ -152,6 +155,7 @@ export default function LoginPage() {
           window.location.href = '/';
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
