@@ -8,31 +8,16 @@ The application is a fully-implemented Multi-Tenant Grant Application & Peer Rev
 
 ## Recently Completed
 
-- [x] Installed dependencies: `@neondatabase/serverless`, `lucide-react`
-- [x] PostgreSQL schema with 9 tables and full indexing (`src/db/migrations/001_initial_schema.sql`)
-- [x] Seed data for 3 institutions (Stanford, MIT, Harvard) with 15 users and sample proposals (`src/db/seed.sql`)
-- [x] JWT authentication utilities (`src/lib/auth.js`)
-- [x] Database connection utility with audit logging (`src/lib/db.js`)
-- [x] Intelligent matching algorithm with relevance/conflict/bias/availability scoring (`src/lib/matching.js`)
-- [x] SSO callback API (`/api/auth/sso/callback`)
-- [x] User profile API (`/api/v1/users/me`)
-- [x] Proposals CRUD API with FTS search and role-based filtering
-- [x] Reviewer matching API with caching and force-refresh
-- [x] Reviewer assignment API with workload management
-- [x] Reviews API with full lifecycle (accept/decline/draft/submit/conflict)
-- [x] Reviewers API with expertise filtering
-- [x] ORCID integration API
-- [x] Background matching job API
-- [x] Login page with 8 demo accounts across 3 institutions
-- [x] Dashboard page for managers/admins with proposal management and matching modal
-- [x] Proposals page for applicants with create/edit/submit/delete
-- [x] Reviews page for reviewers with scoring and conflict declaration
-- [x] Reviewers page for managers with workload visualization
-- [x] Build passes (16 routes), lint passes (0 errors, 3 warnings)
-- [x] Committed and pushed to git
-- [x] Fixed React useEffect dependency warnings in dashboard, proposals, and reviews pages
-- [x] Added .env.example for environment variable documentation
-- [x] Enhanced UI with premium design system (custom Tailwind theme, animations, responsive layouts)
+- [x] Added premium dashboard features with sidebar navigation
+- [x] Created shared Sidebar component with role-based menu (src/components/layout/Sidebar.jsx)
+- [x] Created DashboardLayout wrapper with auth handling (src/components/layout/DashboardLayout.jsx)
+- [x] Created shared UI components library (src/components/ui/index.jsx)
+- [x] Enhanced dashboard page with grid view and quick actions
+- [x] Enhanced proposals page with comprehensive form validation (auto-save, character limits, methodology, budget, timeline fields)
+- [x] Enhanced reviews page with score tracking, recommendations, and average score display
+- [x] Enhanced reviewers page with grid/list view toggle and detail modal
+- [x] All pages now use consistent sidebar navigation with role-based menus
+- [x] Build passes, typecheck passes, lint passes with 0 errors
 
 ## Current Structure
 
